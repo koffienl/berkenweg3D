@@ -169,10 +169,13 @@ header.topbar .modes{margin:0;flex:none}
 .theme-sw:hover{border-color:#81997a}
 .theme-sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* ---- donkere modus van de pagina: bediening omgekeerd (tint blijft), het 3D-beeld zelf niet ---- */
-html[data-theme="dark"]{color-scheme:dark;background:#121614}
-html[data-theme="dark"] body{background:#121614}
-html[data-theme="dark"] header.topbar,html[data-theme="dark"] aside,html[data-theme="dark"] .modal>*,html[data-theme="dark"] .stage-title,html[data-theme="dark"] .where,html[data-theme="dark"] .dock,html[data-theme="dark"] .help-pop,html[data-theme="dark"] .mini-wrap,html[data-theme="dark"] .compass,html[data-theme="dark"] .fly-tl,html[data-theme="dark"] .tour-fx,html[data-theme="dark"] .tour-home,html[data-theme="dark"] .tour-play,html[data-theme="dark"] .kitchen-dims,html[data-theme="dark"] .loading{filter:invert(.9) hue-rotate(180deg)}
-html[data-theme="dark"] .stage{background:#121614}
+html[data-theme="dark"]{color-scheme:dark;background:#262b29}
+html[data-theme="dark"] body{background:#262b29}
+html[data-theme="dark"] header.topbar,html[data-theme="dark"] aside,html[data-theme="dark"] .modal>*,html[data-theme="dark"] .stage-title,html[data-theme="dark"] .where,html[data-theme="dark"] .dock,html[data-theme="dark"] .help-pop,html[data-theme="dark"] .compass,html[data-theme="dark"] .fly-tl,html[data-theme="dark"] .tour-fx,html[data-theme="dark"] .tour-home,html[data-theme="dark"] .tour-play,html[data-theme="dark"] .kitchen-dims,html[data-theme="dark"] .loading{filter:invert(.86) hue-rotate(180deg) brightness(1.17)}
+html[data-theme="dark"] .stage{background:#262b29}
+/* kleine kaart: eigen kleuren houden (herkenbaar), alleen het kader donker */
+html[data-theme="dark"] #stage .mini-wrap{background:#2f3431f2;border-color:#4a524c;box-shadow:0 5px 15px #00000059}
+html[data-theme="dark"] .mini-title{color:#d3dbd5}html[data-theme="dark"] .mini-title span{color:#aab5ad}html[data-theme="dark"] .mini-foot{color:#b3beb6}html[data-theme="dark"] #stage .mini-wrap .mini-title::after{color:#aab5ad}
 </style>
 <script>/* Pagina-thema (licht/donker) voor de bediening, NIET de schemer van het model. Standaard volgt het de systeeminstelling;
  het schuifje in de bovenbalk wisselt; kies je weer wat het systeem zegt, dan volgt de pagina het systeem weer. */

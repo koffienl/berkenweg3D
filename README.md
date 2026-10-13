@@ -10,6 +10,7 @@ Alles zit in één bestand: `index.html` (geometrie, materialen, landschapsdata 
 ## Wijzigingen
 
 ### 2026-10-13
+- Donkere modus: achtergrond antraciet in plaats van bijna zwart, letters en kopjes lichter (beter leesbaar). De kleine kaart rechtsonder houdt zijn eigen kleuren in een donker kader.
 - Titel linksboven en paginatitel (ook in de rondleiding): "Berkenweg". Onder Tonen heet "Buren" nu "Nummers", met ook Nr. 9c (standaard aan) om 9c te verbergen.
 - Rondleiding-link: het landschap staat eerst uit en komt bij 0:21 (als 9a staat, net voordat de camera omzwenkt) met een plof erbij.
 - Donkere modus voor de pagina (schuifje zon/maan in de bovenbalk); volgt standaard de systeeminstelling.
