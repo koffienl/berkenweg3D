@@ -3104,16 +3104,16 @@ function buildCamera(t){const k=FLY_KEYS[0],dx=k.e[0]-k.t[0],dz=k.e[2]-k.t[2],r=
 const TOUR_T=FLY_SEG.reduce((a,b)=>a+b,0);
 function buildApply(t){DROP.on=true;for(const s of BUILD_STEPS){const y=buildDropY(t-s.t,s.h);DROP.hide[s.g]=y===null?1:0;DROP.y[s.g]=y||0}buildCamera(t)}
 function tourApply(){let acc=0,i=0;for(;i<FLY_SEG.length;i++){if(fly.t<acc+FLY_SEG[i])break;acc+=FLY_SEG[i]}i=Math.min(i,FLY_SEG.length-1);const a=FLY_KEYS[i],b=FLY_KEYS[(i+1)%FLY_KEYS.length],u=flySmooth(Math.min(1,(fly.t-acc)/FLY_SEG[i]));for(let k=0;k<3;k++){fly.eye[k]=a.e[k]+(b.e[k]-a.e[k])*u;fly.target[k]=a.t[k]+(b.t[k]-a.t[k])*u}}
-function flyNow(){return fly.build!=null?fly.build:fly.free?BUILD_T+TOUR_T:BUILD_T+fly.t}
-function flySeek(T){T=Math.max(0,Math.min(BUILD_T+TOUR_T-.001,T));flyResetCues();fly.free=null;
- if(T<BUILD_T){fly.build=T;fly.t=0;buildApply(T)}else{fly.build=null;DROP.on=false;fly.t=T-BUILD_T;for(const c of FLY_CUES)if(fly.t>=c.t)c.on();tourApply()}animSnap();
+function flyNow(){return fly.build!=null?fly.build:fly.route!=null?BUILD_T+TOUR_T+fly.route:fly.free?BUILD_T+TOUR_T:BUILD_T+fly.t}
+function flySeek(T){T=Math.max(0,Math.min(flyTotal()-.001,T));flyResetCues();fly.free=null;fly.route=null;
+ if(T<BUILD_T){fly.build=T;fly.t=0;buildApply(T)}else if(ROUTE_ON&&T>=BUILD_T+TOUR_T){fly.build=null;DROP.on=false;fly.t=TOUR_T;for(const c of FLY_CUES)if(fly.t>=c.t)c.on();fly.route=T-BUILD_T-TOUR_T;routeInit();routeApply(null)}else{fly.build=null;DROP.on=false;fly.t=T-BUILD_T;for(const c of FLY_CUES)if(fly.t>=c.t)c.on();tourApply()}animSnap();
  dirty=true;shadowDirty=true;flyTlUpdate()}
 // ---- Na de rondleiding: eindeloze, willekeurige vluchten rond de buurhuizen (alleen buitenom/erboven, nooit naar binnen) ----
 // Elke vlucht kiest een huis (gewogen), een startrichting, draaihoek, afstand, hoogte en duur; tussen vluchten glijdt de camera 3 s over.
 const FREE_POI=[{c:[25.2,3,-10.8],r:[20,28],w:3},{c:[27.15,3.5,16.6],r:[20,28],w:3},{c:[-15.5,2.5,-7.5],r:[20,29],w:3},
  {c:[6.2,3,5],r:[22,30],w:1.5},{c:[8,0,0],r:[55,72],w:1,high:1}];
 // Overgang tussen vluchten: duur groeit met de afstand (3-7 s) en de camera maakt een boogje omhoog, zodat hij nooit door een dak scheert.
-function freeSeg(prev){if(REC.active)return recNextSeg();const POIS=FREE_POI.concat(window.CAMEL_POI&&landOn()?[CAMEL_POI]:[]);let tot=POIS.reduce((s,p)=>s+p.w,0),q=Math.random()*tot,p=POIS[0];for(const x of POIS){if(q<x.w){p=x;break}q-=x.w}
+function freeSeg(prev){const POIS=FREE_POI.concat(window.CAMEL_POI&&landOn()?[CAMEL_POI]:[]);let tot=POIS.reduce((s,p)=>s+p.w,0),q=Math.random()*tot,p=POIS[0];for(const x of POIS){if(q<x.w){p=x;break}q-=x.w}
  if(prev&&p===prev.p&&Math.random()<.7)return freeSeg(prev);                 // liefst niet twee keer hetzelfde huis achter elkaar
  const d=p.r[0]+Math.random()*(p.r[1]-p.r[0]),a0=Math.random()*Math.PI*2,sweep=(.7+Math.random()*1.3)*(Math.random()<.5?-1:1);
  let el=p.high?.75+Math.random()*.3:.3+Math.random()*.45;const minY=6.5;if(p.c[1]+Math.sin(el)*d<minY)el=Math.asin(Math.min(.95,(minY-p.c[1])/d));
@@ -3123,10 +3123,10 @@ function freeSeg(prev){if(REC.active)return recNextSeg();const POIS=FREE_POI.con
   return{p,c,follow:sp,d:d2,dd:(Math.random()-.5)*2,a0:Math.random()*Math.PI*2,sweep:(.5+Math.random()*.6)*(Math.random()<.5?-1:1),el:.28+Math.random()*.3,del:(Math.random()-.5)*.15,dur:9+Math.random()*4}}
  const del=(Math.random()-.5)*.25,dd=(Math.random()-.5)*.3*d;return{p,c:p.c,d,dd,a0,sweep,el,del,dur:9+Math.random()*5}}
 function zooCentroid(sp){const A=CAMELS.filter(a=>a.sp===sp);let x=0,z=0;for(const a of A){x+=a.x/A.length;z+=a.z/A.length}return[x,(landHW?landHW(x,z):0)+.9,z]}
-function freeCam(s,u){if(s.home)return{eye:[...s.e],target:[...s.t]};const a=s.a0+s.sweep*u,el=s.el+s.del*u,d=s.d+s.dd*u;return{eye:[s.c[0]+Math.sin(a)*Math.cos(el)*d,s.c[1]+Math.sin(el)*d,s.c[2]+Math.cos(a)*Math.cos(el)*d],target:[...s.c]}}
+function freeCam(s,u){const a=s.a0+s.sweep*u,el=s.el+s.del*u,d=s.d+s.dd*u;return{eye:[s.c[0]+Math.sin(a)*Math.cos(el)*d,s.c[1]+Math.sin(el)*d,s.c[2]+Math.cos(a)*Math.cos(el)*d],target:[...s.c]}}
 function freeBlend(F){const c=freeCam(F.s,0),d=Math.hypot(...c.eye.map((v,i)=>v-F.from.eye[i]));F.bl=Math.max(3,Math.min(7,d/10));F.lift=Math.min(12,d*.18)}
 function freeStart(){fly.free={s:freeSeg(null),t:0,from:{eye:[...fly.eye],target:[...fly.target]}};freeBlend(fly.free)}
-function freeUpdate(dt){const F=fly.free;F.t+=dt;if(F.s.follow&&!F.s.home){const m=zooCentroid(F.s.follow);for(let k=0;k<3;k++)F.s.c[k]+=(m[k]-F.s.c[k])*Math.min(1,dt*.4)}if(F.t>=F.s.dur){const end=freeCam(F.s,1);F.from={eye:end.eye,target:end.target};F.s=freeSeg(F.s);F.t=0;freeBlend(F)}
+function freeUpdate(dt){const F=fly.free;F.t+=dt;if(F.s.follow){const m=zooCentroid(F.s.follow);for(let k=0;k<3;k++)F.s.c[k]+=(m[k]-F.s.c[k])*Math.min(1,dt*.4)}if(F.t>=F.s.dur){const end=freeCam(F.s,1);F.from={eye:end.eye,target:end.target};F.s=freeSeg(F.s);F.t=0;freeBlend(F)}
  const k=flySmooth(Math.min(1,F.t/F.s.dur)),cur=freeCam(F.s,k),b=flySmooth(Math.min(1,F.t/F.bl));
  for(let i=0;i<3;i++){fly.eye[i]=F.from.eye[i]+(cur.eye[i]-F.from.eye[i])*b;fly.target[i]=F.from.target[i]+(cur.target[i]-F.from.target[i])*b}
  fly.eye[1]+=Math.sin(Math.PI*b)*F.lift;
@@ -3144,11 +3144,32 @@ function landFxTick(now){if(TOUR_ONLY&&!tourLandManual){const want=fly.active&&!
 const REC_MODE=/(^|[?&#])record($|[&=])/.test(location.search.slice(1)+'&'+location.hash.slice(1));
 const REC={active:false,started:false,rec:null,chunks:[],mime:'',ext:'mp4',step:0,startCam:null,t0:0};
 window.addEventListener('keydown',e=>{if(document.body.classList.contains('rec-lock')){e.stopImmediatePropagation();e.preventDefault()}},true);
-function recNextSeg(){REC.step++;
- if(REC.step<=2&&window.CAMEL_POI&&CAMELS.length&&landOn()){const sps=Object.keys(ZOO).filter(k=>k!=='santa'&&CAMELS.some(a=>a.sp===k)).sort((a,b)=>CAMELS.filter(x=>x.sp===b).length-CAMELS.filter(x=>x.sp===a).length),sp=sps[(REC.step-1)%sps.length],c=zooCentroid(sp);
-  return REC.step===1?{p:CAMEL_POI,c,follow:sp,d:12,dd:-2,a0:Math.random()*Math.PI*2,sweep:1.1,el:.34,del:-.08,dur:11}      /* eerst ruim langs de grootste groep */
-   :{p:CAMEL_POI,c,follow:sp,d:7.5,dd:-1,a0:Math.random()*Math.PI*2,sweep:-1,el:.2,del:.04,dur:10}}                          /* dan laag tussen de tweede groep door */
- const h=REC.startCam||{eye:[...FLY_KEYS[0].e],target:[...FLY_KEYS[0].t]};return{p:null,home:true,e:[...h.eye],t:[...h.target],c:[...h.target],d:0,dd:0,a0:0,sweep:0,el:0,del:0,dur:1e9}}
+// Route na de rondleiding (alleen ?rondleiding en ?record): derde deel van de tijdlijn, samen met opbouw + rondleiding precies 2:30 (de soundtrack).
+// Vanaf 9c naar de dierenweide (laag langs/tussen de kamelen), dan over de zandverstuiving, het bos, het veld en langs de asfaltweg terug
+// naar het beginbeeld boven 9c. Punten [relatieve snelheid naar dit punt, x, hoogte, z] in modelcoordinaten (uit de BGT: weg z ~ -85,
+// velden x 120-330, bos rond 130,95 / 40,150, zand rond -90,140); de dierenpunten volgen de grootste groep.
+const ROUTE_ON=TOUR_ONLY,ROUTE_T=150-(BUILD_T+TOUR_T),ROUTE={P:null,up:0,zw:[0,0],hw:0,sp:null,from:null,home:null};
+const ROUTE_WP=[[18,-150,18,40],[21,-90,26,140],[20,40,34,150],[20,130,34,95],[17,185,30,10],[10,175,22,-81],[10,110,20,-86],[10,40,26,-92]];
+function flyTotal(){return BUILD_T+TOUR_T+(ROUTE_ON?ROUTE_T:0)}
+function routeInit(){const D=ROUTE_T;ROUTE.from={eye:[...FLY_KEYS[0].e],target:[...FLY_KEYS[0].t]};ROUTE.home=fly.home||{eye:[...FLY_KEYS[0].e],target:[...FLY_KEYS[0].t]};ROUTE.up=0;
+ const sps=Object.keys(ZOO).filter(k=>k!=='santa'&&CAMELS.some(x=>x.sp===k)).sort((x,y)=>CAMELS.filter(q=>q.sp===y).length-CAMELS.filter(q=>q.sp===x).length);ROUTE.sp=sps[0]||null;
+ const c=ROUTE.sp?zooCentroid(ROUTE.sp):[-142,3,-48],f=ROUTE.from.eye,dx=c[0]-f[0],dz=c[2]-f[2],dl=Math.hypot(dx,dz)||1,ux=dx/dl,uz=dz/dl;
+ const w0=ROUTE_WP[0],nx0=w0[1]-c[0],nz0=w0[3]-c[2],nl=Math.hypot(nx0,nz0)||1,nx=nx0/nl,nz=nz0/nl;   /* nx,nz: richting van de dieren naar de zandverstuiving */
+ const pts=[{v:0,p:ROUTE.from.eye},{v:20,p:[c[0]-ux*48,c[1]+26,c[2]-uz*48]},{v:13,p:[c[0]-ux*17,c[1]+8,c[2]-uz*17]},{v:5,p:[c[0]+uz*9+ux*4,c[1]+6,c[2]-ux*9+uz*4]},{v:12,p:[c[0]+nx*26,c[1]+20,c[2]+nz*26]},
+  ...ROUTE_WP.map(w=>({v:w[0],p:[w[1],w[2],w[3]]})),{v:16,p:[...ROUTE.home.eye]}];
+ /* tijd per stuk = afstand / relatieve snelheid, geschaald naar de vaste routeduur */
+ let T=0;const ts=[0];for(let i=1;i<pts.length;i++){T+=Math.hypot(...pts[i].p.map((v,j)=>v-pts[i-1].p[j]))/pts[i].v;ts.push(T)}ROUTE.P=pts.map((q,i)=>({t:ts[i]/T*D,p:q.p}));
+ ROUTE.zw=[ROUTE.P[2].t-2.5,ROUTE.P[3].t+1.5];ROUTE.hw=ROUTE.P[ROUTE.P.length-2].t-1}
+function routePos(t){const P=ROUTE.P,n=P.length;t=Math.max(0,Math.min(P[n-1].t,t));let i=0;while(i<n-2&&t>P[i+1].t)i++;
+ const tan=k=>k===0?P[1].p.map((v,j)=>(v-P[0].p[j])/(P[1].t-P[0].t)*.5):k===n-1?[0,0,0]:P[k+1].p.map((v,j)=>(v-P[k-1].p[j])/(P[k+1].t-P[k-1].t));
+ const h=P[i+1].t-P[i].t,s=(t-P[i].t)/h,s2=s*s,s3=s2*s,m0=tan(i),m1=tan(i+1);return P[i].p.map((v,j)=>(2*s3-3*s2+1)*v+(s3-2*s2+s)*h*m0[j]+(-2*s3+3*s2)*P[i+1].p[j]+(s3-s2)*h*m1[j])}
+function routeApply(dt){const t=fly.route,D=ROUTE_T,sm=(a,b,x)=>{const k=Math.min(1,Math.max(0,(x-a)/(b-a)));return k*k*(3-2*k)},mix=(A,B,w)=>A.map((v,j)=>v+(B[j]-v)*w);
+ const e=routePos(t),ah=routePos(Math.min(D,t+3));let tg=[ah[0],ah[1]-9,ah[2]];tg=mix(ROUTE.from.target,tg,sm(0,3,t));
+ const wz=sm(ROUTE.zw[0]-2,ROUTE.zw[0],t)*(1-sm(ROUTE.zw[1],ROUTE.zw[1]+2,t));if(wz>0&&ROUTE.sp)tg=mix(tg,zooCentroid(ROUTE.sp),wz);const wh=sm(ROUTE.hw,D,t);tg=mix(tg,ROUTE.home.target,wh);
+ const need=(landOn()?landClear(e[0],e[2]):-9)+6-3*wz,lift=Math.max(0,need-e[1]);if(dt==null)ROUTE.up=lift;else ROUTE.up+=(lift-ROUTE.up)*Math.min(1,dt*(lift>ROUTE.up?8:1));
+ fly.eye=[e[0],e[1]+ROUTE.up*(1-wh),e[2]];fly.target=tg}
+function routeEnd(){if(REC.active){recFinish();return}fly.paused=true;flyBtnIcon('play');dirty=true}   /* rondleiding-link: stil op het beginbeeld; play = opnieuw */
+
 function recBegin(){try{const stream=$('view').captureStream(30),at=recAudioTrack();if(at)stream.addTrack(at);
   const cands=['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1.640028,opus','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/mp4','video/webm'];
   REC.mime=cands.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t))||'video/webm';REC.ext=REC.mime.indexOf('mp4')>=0?'mp4':'webm';REC.chunks=[];
@@ -3160,22 +3181,24 @@ function recBegin(){try{const stream=$('view').captureStream(30),at=recAudioTrac
 function recStart(){if(REC.started)return;REC.started=true;MUSIC.on=true;const at=recAudioTrack();if(MUSIC.ctx&&MUSIC.ctx.state==='suspended')MUSIC.ctx.resume();
  document.body.classList.add('rec-lock');if(!recBegin()){document.body.classList.remove('rec-lock');return}REC.active=true;REC.t0=performance.now();$('recInd').classList.add('on');
  tourBegin();requestAnimationFrame(()=>{REC.startCam={eye:[...fly.eye],target:[...fly.target]}})}
-function recFinish(){REC.active=false;fly.paused=true;flyBtnIcon('play');dirty=true;setTimeout(()=>{if(REC.rec&&REC.rec.state==='recording')REC.rec.stop()},1800)}   /* muziek faadt uit, dan stoppen */
+function recFinish(){REC.active=false;REC.done=true;fly.paused=true;flyBtnIcon('play');dirty=true;if(REC.rec&&REC.rec.state==='recording')REC.rec.stop()}
 function recTick(now){if(!REC.active)return;const s=Math.floor((now-REC.t0)/1000);$('recTime').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
- const F=fly.free;if(F&&F.s.home&&F.t>=F.bl+1.2)recFinish()}
+ const a=MUSIC.el;if((a&&(a.ended||(isFinite(a.duration)&&a.currentTime>=a.duration-.04)))||(fly.route!=null&&fly.route>=ROUTE_T))recFinish()}   /* stoppen op het einde van de soundtrack (fade-out zit in de muziek) */
 async function recInit(){document.title='Opname Berkenweg';const p=$('tourPlay');p.classList.add('rec');p.setAttribute('aria-label','Opname starten');p.title='Opname starten';p.innerHTML='<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.2" fill="currentColor"></circle></svg>';p.onclick=e=>{e.stopPropagation();recStart()};
  try{const a=musicEl();if(!a)return;const v=a.volume;a.volume=0;await a.play();a.pause();a.currentTime=0;a.volume=v;const C=window.AudioContext||window.webkitAudioContext,t=new C();const ok=t.state==='running';t.close();if(ok)recStart()}catch(e){}}   /* geluid zonder klik toegestaan? dan meteen starten */
 
-function flyUpdate(now){if(!fly.active)return;const dt=Math.min((now-fly.last)/1000,.1);fly.last=now;if(fly.paused||fly.scrub)return;
+function flyUpdate(now){if(!fly.active)return;let dt=Math.min((now-fly.last)/1000,.1);fly.last=now;
+ if(REC.active){const a=MUSIC.el,mt=a&&!a.paused?a.currentTime:null;dt=mt===null?0:Math.max(0,Math.min(3,mt-(REC.lastMT==null?mt:REC.lastMT)));if(mt!==null)REC.lastMT=mt}   /* ?record: de muziek is de klok */if(fly.paused||fly.scrub)return;
  if(fly.build!=null){fly.build+=dt;if(fly.build>=BUILD_T){fly.build=null;DROP.on=false;fly.t=0;tourApply()}else buildApply(fly.build);shadowDirty=true}
+ else if(fly.route!=null){fly.route=Math.min(ROUTE_T,fly.route+dt);routeApply(dt);if(fly.route>=ROUTE_T)routeEnd()}
  else if(fly.free)freeUpdate(dt);
- else{const nt=fly.t+dt;if(nt>=TOUR_T){fly.t=TOUR_T;freeStart();freeUpdate(0)}else{for(const c of FLY_CUES)if(fly.t<c.t&&nt>=c.t)c.on();fly.t=nt;tourApply()}}
+ else{const nt=fly.t+dt;if(nt>=TOUR_T){fly.t=TOUR_T;if(ROUTE_ON){fly.route=0;routeInit();routeApply(null)}else{freeStart();freeUpdate(0)}}else{for(const c of FLY_CUES)if(fly.t<c.t&&nt>=c.t)c.on();fly.t=nt;tourApply()}}
  dirty=true;flyTlUpdate()}
 // ---- Tijdlijn onderin (alleen tijdens de rondleiding): schuiven = springen in opbouw + rondleiding ----
 function flyFmt(s){s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
-function flyTlUpdate(){const r=$('flyTlRange');if(!r)return;const pre=TOUR_ONLY&&!tourKiosk.started,tot=BUILD_T+TOUR_T,now=pre?0:flyNow();if(!fly.scrub)r.value=Math.round(now/tot*1000);
- r.style.setProperty('--p',(r.value/10)+'%');$('flyTlTime').textContent=flyFmt(now)+' / '+flyFmt(tot);$('flyTlPhase').textContent=pre||fly.build!=null?'Opbouw':fly.free?'Rondvlucht':'Rondleiding'}
-function flyTlBind(){const r=$('flyTlRange');if(!r)return;const tot=()=>BUILD_T+TOUR_T;$('flyTlBuild').style.width=(BUILD_T/tot()*100)+'%';
+function flyTlUpdate(){const r=$('flyTlRange');if(!r)return;const pre=TOUR_ONLY&&!tourKiosk.started,tot=flyTotal(),now=pre?0:flyNow();if(!fly.scrub)r.value=Math.round(now/tot*1000);
+ r.style.setProperty('--p',(r.value/10)+'%');$('flyTlTime').textContent=flyFmt(now)+' / '+flyFmt(tot);$('flyTlPhase').textContent=pre||fly.build!=null?'Opbouw':fly.free||fly.route!=null?'Rondvlucht':'Rondleiding'}
+function flyTlBind(){const r=$('flyTlRange');if(!r)return;const tot=()=>flyTotal();$('flyTlBuild').style.width=(BUILD_T/tot()*100)+'%';
  const seek=()=>flySeek(r.value/1000*tot());
  r.addEventListener('pointerdown',()=>{fly.scrub=true});r.addEventListener('input',()=>{fly.scrub=true;seek()});
  const end=()=>{if(!fly.scrub)return;fly.scrub=false;seek();fly.last=performance.now()};r.addEventListener('change',end);r.addEventListener('pointerup',end);r.addEventListener('pointercancel',end);
@@ -3248,7 +3271,8 @@ const MUSIC_START=0,MUSIC_VOL=.8;
 /* mp3 uit het datablok onderaan (id tourMp3) pas bij het eerste afspelen omzetten naar een blob-URL */
 function tourMp3Src(){const el=document.getElementById('tourMp3');if(!el)return null;const b=atob(el.textContent.trim()),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return URL.createObjectURL(new Blob([u],{type:'audio/mpeg'}))}
 function musicEl(){if(MUSIC.el)return MUSIC.el;const src=tourMp3Src();if(!src)return null;const a=new Audio(src);a.preload='auto';a.volume=0;
- a.addEventListener('ended',()=>{a.currentTime=MUSIC_START;if(MUSIC.playing)a.play().catch(()=>{})});MUSIC.el=a;return a}
+ a.addEventListener('ended',()=>{if(typeof REC!=='undefined'&&(REC.done||REC.active)){if(REC.active)recFinish();return}   /* ?record: einde muziek = einde opname */
+ a.currentTime=MUSIC_START;if(MUSIC.playing)a.play().catch(()=>{})});MUSIC.el=a;return a}
 /* Geluid in de video-opname: de muziek loopt dan via Web Audio (versterker = fade), naar de luidspreker én naar een opnamespoor. Eenmalig per pagina. */
 function recAudioTrack(){const a=musicEl();if(!a)return null;try{if(!MUSIC.ctx){const C=window.AudioContext||window.webkitAudioContext,ctx=new C(),src=ctx.createMediaElementSource(a),g=ctx.createGain(),dst=ctx.createMediaStreamDestination();g.gain.value=MUSIC.vol;src.connect(g);g.connect(ctx.destination);g.connect(dst);MUSIC.ctx=ctx;MUSIC.gain=g;MUSIC.dst=dst;a.volume=1}if(MUSIC.ctx.state==='suspended')MUSIC.ctx.resume();return MUSIC.dst.stream.getAudioTracks()[0]||null}catch(e){return null}}
 function musicPlay(){const a=musicEl();if(!a)return;if(MUSIC.restart||a.currentTime<MUSIC_START){try{a.currentTime=MUSIC_START}catch(e){}MUSIC.restart=false}
@@ -3267,9 +3291,9 @@ function musicUpdate(){const want=fly.active&&!fly.paused&&MUSIC.on;if(want&&!MU
 function musicToggle(){if(musicLocked()){musicUnlock();return}MUSIC.on=!MUSIC.on;if(!MUSIC_TOUR_LINK)try{localStorage.setItem('tourMusic',MUSIC.on?'1':'0')}catch(e){}musicUpdate()}
 
 let flySaved=null;
-function flyStart(){if(fly.active)return;const ks=['mode','plot','garden','outbuilding','furn','serre','top','floor','patioOpen','parasolOpen','tubOpen','doorOpen','serreOpen','serreDoors','braaiOpen','neighbor1','neighbor2','shadeClosed','tubGlassOpen','loungeGlassOpen','n9d','house9c','bedDoorOpen','bathDoorOpen'];flySaved={};for(const k of ks)flySaved[k]=state[k];Object.assign(state,{mode:'site',plot:true,garden:true,outbuilding:true,furn:true,serre:true,top:false,patioOpen:false,parasolOpen:false,tubOpen:false,doorOpen:false,serreOpen:false,serreDoors:false,braaiOpen:false,neighbor1:true,neighbor2:true,n9d:true,house9c:true,shadeClosed:false});fly.active=true;fly.free=null;fly.paused=false;fly.t=0;fly.fov=54;fly.last=performance.now();fly.eye=[...FLY_KEYS[0].e];fly.target=[...FLY_KEYS[0].t];state.tubGlassOpen=false;state.loungeGlassOpen=false;fly.build=0;fly.scrub=false;MUSIC.restart=true;DROP.hide.fill(1);DROP.y.fill(0);buildApply(0);shadowDirty=true;const b=$('flyBtn');if(b)b.classList.add('active');document.body.classList.add('flyover');flyBtnIcon('pause');configure();animSnap();flyTlUpdate();dirty=true}
-function flyStop(){if(!fly.active)return;fly.active=false;fly.free=null;fly.paused=false;fly.scrub=false;fly.build=null;DROP.on=false;shadowDirty=true;if(flySaved){Object.assign(state,flySaved);flySaved=null}const b=$('flyBtn');if(b)b.classList.remove('active');document.body.classList.remove('flyover');flyBtnIcon('play');configure();dirty=true}
-function flyPauseToggle(){if(TOUR_ONLY&&!tourKiosk.started){tourBegin();return}if(!fly.active){flyStart();return}fly.paused=!fly.paused;flyBtnIcon(fly.paused?'play':'pause');if(!fly.paused){fly.last=performance.now();dirty=true}}
+function flyStart(){if(fly.active)return;const ks=['mode','plot','garden','outbuilding','furn','serre','top','floor','patioOpen','parasolOpen','tubOpen','doorOpen','serreOpen','serreDoors','braaiOpen','neighbor1','neighbor2','shadeClosed','tubGlassOpen','loungeGlassOpen','n9d','house9c','bedDoorOpen','bathDoorOpen'];flySaved={};for(const k of ks)flySaved[k]=state[k];Object.assign(state,{mode:'site',plot:true,garden:true,outbuilding:true,furn:true,serre:true,top:false,patioOpen:false,parasolOpen:false,tubOpen:false,doorOpen:false,serreOpen:false,serreDoors:false,braaiOpen:false,neighbor1:true,neighbor2:true,n9d:true,house9c:true,shadeClosed:false});fly.active=true;fly.free=null;fly.paused=false;fly.t=0;fly.fov=54;fly.last=performance.now();fly.eye=[...FLY_KEYS[0].e];fly.target=[...FLY_KEYS[0].t];state.tubGlassOpen=false;state.loungeGlassOpen=false;fly.build=0;fly.route=null;fly.scrub=false;MUSIC.restart=true;DROP.hide.fill(1);DROP.y.fill(0);buildApply(0);fly.home={eye:[...fly.eye],target:[...fly.target]};shadowDirty=true;const b=$('flyBtn');if(b)b.classList.add('active');document.body.classList.add('flyover');flyBtnIcon('pause');configure();animSnap();flyTlUpdate();dirty=true}
+function flyStop(){if(!fly.active)return;fly.active=false;fly.free=null;fly.route=null;fly.paused=false;fly.scrub=false;fly.build=null;DROP.on=false;shadowDirty=true;if(flySaved){Object.assign(state,flySaved);flySaved=null}const b=$('flyBtn');if(b)b.classList.remove('active');document.body.classList.remove('flyover');flyBtnIcon('play');configure();dirty=true}
+function flyPauseToggle(){if(TOUR_ONLY&&!tourKiosk.started){tourBegin();return}if(fly.route!=null&&fly.route>=ROUTE_T-.01){MUSIC.restart=true;tourBegin();return}   /* einde route: opnieuw beginnen */if(!fly.active){flyStart();return}fly.paused=!fly.paused;flyBtnIcon(fly.paused?'play':'pause');if(!fly.paused){fly.last=performance.now();dirty=true}}
 let last=performance.now(),frame=0,firePhase=0,fireLast=0;function loop(now){let dt=Math.min((now-last)/1000,.25);last=now;flyUpdate(now);musicUpdate();if(landOn()&&state.camels!==false){camelTick(dt);const ce=getCamera().eye,cp=window.CAMEL_POI;loop.za=(loop.za||0)+dt;if((!cp||Math.hypot(ce[0]-cp.c[0],ce[2]-cp.c[2])<240)&&loop.za>=.033){loop.za=0;animRebuild('landCamels',buildCamels);dirty=true}}/* kamelen alleen hertekenen als ze in de buurt van de camera zijn */if(state.winter&&state.mode!=='cut')dirty=true;   // vallende sneeuw: elke frame tekenen
 landFxTick(now);recTick(now);if(animTick(dt)){dirty=true;shadowDirty=true}if(move(dt)){dirty=true;drawMap()}if(state.braaiOpen&&state.outbuilding&&state.plot&&state.mode!=='cut'&&now-fireLast>140){firePhase=(firePhase+1)%3;fireLast=now;dirty=true}if(dirty||shadowDirty){cam=getCamera();frameData=renderer.render(cam,state,visibility,shadowDirty);shadowDirty=false;dirty=false;updateLabels();compassUpdate(cam);frame++}requestAnimationFrame(loop)}
 try{renderer=initRenderer($('view'));caps(0,1.10);caps(1,F+1.10);renderer.upload();bind();renderSiteLabels();renderRoomList();resetCamera();$('loading').style.display='none';window.modelQA={bathroom:BATHROOM,focusBathroom,kitchen:KITCHEN,focusKitchen,stepPathConfig:STEP_PATH,steppingGeometry,alignPavilionToStepPath,patioDoors:PATIO_DOORS,terraceConfig:TERRACE,pavilion:PAVILION,terraceGeometry,focusCorrection,configure,batches,site:SITE,buildSite,enterGarden,sitePoint,polygonArea,state,rooms,footprint:FOOT,main:MAIN,annex:ANNEX,wallBoxes,colliders,enterRoom,setFloor,setMode,resetCamera,canMove,visibility,renderer,walk,orbit,getCamera,roomAt,getFrames:()=>frame};configure();requestAnimationFrame(loop);
