@@ -1460,11 +1460,11 @@ function buildLand(){const near=landGrid(LAND.near),far=landGrid(LAND.far),NB=LA
  {const c=landWorld(185745,490025);window.CAMEL_POI={c:[c[0],landHW(c[0],c[1])+1.5,c[1]],r:[16,24],w:2.5}}   // rondvlucht ook langs de kamelen
  // huizen in de omgeving (BAG-omtrek, goot- en nokhoogte uit het AHN): muren langs de omtrek, zadeldak over de lange as; niet op/naast de vier kavels
  for(const[eave,ridge,fl]of LAND.bag){const R=[];for(let i=0;i<fl.length-2;i+=2)R.push(landWorld(185420+fl[i],489880+fl[i+1]));if(R.some(p=>dist(p[0],p[1])<2))continue;
-  const tag='landHouses',y0=Math.min(...R.map(p=>{const rd=[185420,489880];return 0})),gy=Math.min(...R.map((p,i)=>H(185420+fl[i*2],489880+fl[i*2+1],p))),eh=gy+Math.max(2.6,Math.min(eave,ridge-1.5)),rh=gy+Math.max(eave+1.2,ridge);
+  const tag='landHouses',y0=Math.min(...R.map(p=>{const rd=[185420,489880];return 0})),gy=Math.min(...R.map((p,i)=>H(185420+fl[i*2],489880+fl[i*2+1],p))),bad=eave<2||ridge<3.5,eh=gy+(bad?2.9:Math.max(2.6,Math.min(eave,ridge-1.5)));let rh=gy+Math.max(eave+1.2,ridge);   /* bad: AHN-hoogte onbetrouwbaar (bv. onder bomen gemeten) */
   for(let i=0;i<R.length;i++){const a=R[i],b=R[(i+1)%R.length];quad([a[0],gy-.3,a[1]],[b[0],gy-.3,b[1]],[b[0],eh,b[1]],[a[0],eh,a[1]],'ctxWall',tag)}
   let best=0,ax=[1,0];for(let i=0;i<R.length;i++){const a=R[i],b=R[(i+1)%R.length],L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L>best){best=L;ax=[(b[0]-a[0])/L,(b[1]-a[1])/L]}}
   const pr=[-ax[1],ax[0]],us=R.map(p=>p[0]*ax[0]+p[1]*ax[1]),vs=R.map(p=>p[0]*pr[0]+p[1]*pr[1]),u0=Math.min(...us)-.3,u1=Math.max(...us)+.3,v0=Math.min(...vs)-.3,v1=Math.max(...vs)+.3,vm=(v0+v1)/2;
-  const W=(u,v,y)=>[u*ax[0]+v*pr[0],y,u*ax[1]+v*pr[1]],flat=ridge-eave<1.2;
+  const W=(u,v,y)=>[u*ax[0]+v*pr[0],y,u*ax[1]+v*pr[1]],flat=!bad&&ridge-eave<1.2;if(!flat&&(bad||rh<eh+1.2))rh=eh+Math.max(1.2,(v1-v0)/2*.84);   /* nok nooit onder de goot: dan een gewoon zadeldak van ca. 40 graden */
   if(flat){quad(W(u0,v0,eh),W(u1,v0,eh),W(u1,v1,eh),W(u0,v1,eh),'ctxRoof',tag)}
   else{quad(W(u0,v0,eh),W(u1,v0,eh),W(u1,vm,rh),W(u0,vm,rh),'ctxRoof',tag);quad(W(u0,v1,eh),W(u1,v1,eh),W(u1,vm,rh),W(u0,vm,rh),'ctxRoof',tag);
    for(const u of[u0+.3,u1-.3])tri(W(u,v0+.3,eh),W(u,v1-.3,eh),W(u,vm,rh-.15),'ctxWall',tag)}}
@@ -3145,11 +3145,11 @@ function landFxTick(now){if(TOUR_ONLY&&!tourLandManual){const want=fly.active&&!
 const REC_MODE=/(^|[?&#])record($|[&=])/.test(location.search.slice(1)+'&'+location.hash.slice(1));
 const REC={active:false,started:false,rec:null,chunks:[],mime:'',ext:'mp4',step:0,startCam:null,t0:0};
 window.addEventListener('keydown',e=>{if(document.body.classList.contains('rec-lock')){e.stopImmediatePropagation();e.preventDefault()}},true);
-// Route na de rondleiding (alleen ?rondleiding en ?record): derde deel van de tijdlijn, samen met opbouw + rondleiding precies 2:30 (de soundtrack).
+// Route na de rondleiding (overal: rondleiding-link, ?record en de knop Rondleiding in ?verkennen): derde deel van de tijdlijn, samen met opbouw + rondleiding precies 2:30 (de soundtrack).
 // Vanaf 9c naar de dierenweide (laag langs/tussen de kamelen), dan over de zandverstuiving, het bos, het veld en langs de asfaltweg terug
 // naar het beginbeeld boven 9c. Punten [relatieve snelheid naar dit punt, x, hoogte, z] in modelcoordinaten (uit de BGT: weg z ~ -85,
 // velden x 120-330, bos rond 130,95 / 40,150, zand rond -90,140); de dierenpunten volgen de grootste groep.
-const ROUTE_ON=TOUR_ONLY,ROUTE_T=150-(BUILD_T+TOUR_T),ROUTE={P:null,up:0,zw:[0,0],hw:0,sp:null,from:null,home:null};
+const ROUTE_ON=true,ROUTE_T=150-(BUILD_T+TOUR_T),ROUTE={P:null,up:0,zw:[0,0],hw:0,sp:null,from:null,home:null};
 const ROUTE_WP=[[18,-150,18,40],[21,-90,26,140],[20,40,34,150],[20,130,34,95],[17,185,30,10],[10,175,22,-81],[10,110,20,-86],[10,40,26,-92]];
 function flyTotal(){return BUILD_T+TOUR_T+(ROUTE_ON?ROUTE_T:0)}
 function routeInit(){const D=ROUTE_T;ROUTE.from={eye:[...FLY_KEYS[0].e],target:[...FLY_KEYS[0].t]};ROUTE.home=fly.home||{eye:[...FLY_KEYS[0].e],target:[...FLY_KEYS[0].t]};ROUTE.up=0;
@@ -3169,7 +3169,7 @@ function routeApply(dt){const t=fly.route,D=ROUTE_T,sm=(a,b,x)=>{const k=Math.mi
  const wz=sm(ROUTE.zw[0]-2,ROUTE.zw[0],t)*(1-sm(ROUTE.zw[1],ROUTE.zw[1]+2,t));if(wz>0&&ROUTE.sp)tg=mix(tg,zooCentroid(ROUTE.sp),wz);const wh=sm(ROUTE.hw,D,t);tg=mix(tg,ROUTE.home.target,wh);
  const need=(landOn()?landClear(e[0],e[2]):-9)+6-3*wz,lift=Math.max(0,need-e[1]);if(dt==null)ROUTE.up=lift;else ROUTE.up+=(lift-ROUTE.up)*Math.min(1,dt*(lift>ROUTE.up?8:1));
  fly.eye=[e[0],e[1]+ROUTE.up*(1-wh),e[2]];fly.target=tg}
-function routeEnd(){if(REC.active){recFinish();return}fly.paused=true;flyBtnIcon('play');dirty=true}   /* rondleiding-link: stil op het beginbeeld; play = opnieuw */
+function routeEnd(){if(REC.active){recFinish();return}if(!TOUR_ONLY){flyStop();return}fly.paused=true;flyBtnIcon('play');dirty=true}   /* ?verkennen: terug in het model; rondleiding-link: stil op het beginbeeld, play = opnieuw */
 
 function recBegin(){try{const stream=$('view').captureStream(30),at=recAudioTrack();if(at)stream.addTrack(at);
   const cands=['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1.640028,opus','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/mp4','video/webm'];
