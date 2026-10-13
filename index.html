@@ -3068,7 +3068,8 @@ const FLY_CUES=[
  {t:49.5,on(){state.bedDoorOpen=true}},                         // deur slaapkamer 1 draait open zodra we ernaartoe draaien
  {t:54.6,on(){state.bathDoorOpen=true}}                         // deur badkamer 1 draait open als we naar de badkamer kijken    // zodra de serre na het omdraaien in beeld komt
 ];
-const TOUR_ONLY=/(^|[?&#])(rondleiding|record)($|[&=])/.test(location.search.slice(1)+'&'+location.hash.slice(1));
+/* Standaard opent de rondleiding (kioskweergave); ?verkennen = het volledige model met alle bediening. ?rondleiding blijft werken, ?record is altijd een rondleiding. */
+const TOUR_ONLY=(q=>/(^|[?&#])(rondleiding|record)($|[&=])/.test(q)||!/(^|[?&#])verkennen($|[&=])/.test(q))(location.search.slice(1)+'&'+location.hash.slice(1));
 // Kiosk (?rondleiding): wacht op play (startbeeld = luchtaanzicht), muziek start met de play-klik, bediening faadt weg bij stilstaande muis.
 const tourKiosk={started:false,timer:null};
 // Sfeerknoppen onder de huisknop (kiosk): bedienen dezelfde knoppen als in het zijpaneel (kerst zet sneeuw aan, sneeuw uit zet kerst uit)
@@ -3078,7 +3079,7 @@ function compassUpdate(c){if(state.compass===false)return;const el=$('compass');
 
 function tourFxSync(){for(const b of document.querySelectorAll('#tourFx button')){const k=b.dataset.fx,on=k==='land'||k==='compass'?state[k]!==false:!!state[k];b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)}}
 function tourKioskInit(){for(const b of document.querySelectorAll('#tourFx button'))b.onclick=e=>{e.stopPropagation();if(b.dataset.fx==='land'){tourLandManual=true;$('landCheck').click()}else if(b.dataset.fx==='compass')$('compassCheck').click();else fxToggle(b.dataset.fx)};tourFxSync();document.body.classList.add('tour-only','tour-ready');document.title='Rondleiding Berkenweg';
- $('tourHome').href=location.href.split(/[?#]/)[0];$('tourPlay').onclick=()=>flyPauseToggle();
+ $('tourHome').href=location.href.split(/[?#]/)[0]+'?verkennen';$('tourPlay').onclick=()=>flyPauseToggle();
  flyStart();fly.paused=true;flyBtnIcon('play');flySeek(BUILD_T+.01);
  const wake=()=>{document.body.classList.remove('tour-idle');clearTimeout(tourKiosk.timer);tourKiosk.timer=setTimeout(()=>{if(tourKiosk.started&&!fly.paused)document.body.classList.add('tour-idle')},2500)};
  tourKiosk.wake=wake;for(const ev of['mousemove','pointerdown','touchstart','keydown','wheel'])window.addEventListener(ev,wake,{passive:true});wake()}
@@ -3207,7 +3208,7 @@ function flyBtnIcon(mode){const b=$('flyBtn');if(!b)return;const icon=mode==='pa
 // ---- Zonnestand en klok (bovenbalk): datum + tijd (Nederlandse tijd, met zomertijd) -> stand van zon en maan -> licht, schaduw, schemer en nacht ----
 // Locatie 9c: 52.39861 N, 5.83855 O; het noorden komt uit de PDOK-koppeling (LANDX). Formules zoals in SunCalc (naar Meeus):
 // zon op ~0,01 graad, maan op ~0,5 graad (ruw, voldoende voor de nacht). Via de link ?rondleiding blijft het vaste licht van voorheen (LIGHT.on=false).
-const CLOCK_ON=!/(^|[?&#])(rondleiding|record)($|[&=])/.test(location.search.slice(1)+'&'+location.hash.slice(1));
+const CLOCK_ON=!TOUR_ONLY;
 const GEO={lat:52.39860956628572,lon:5.8385545130268435};
 var LIGHT={on:false};
 const ASTRO=(()=>{const rad=Math.PI/180,e=rad*23.4397,toDays=t=>t/864e5-.5+2440588-2451545,
@@ -3265,7 +3266,7 @@ clockInit();
 // ---- Soundtrack rondleiding: ingebedde mp3 (datablok id tourMp3 onderaan het bestand, pas gelezen bij het eerste afspelen), start bij het begin en lust terug naar het begin ----
 const MUSIC={on:false,el:null,playing:false,blocked:false,icon:'',vol:0,restart:false};
 // Standaard: geluid AAN in de deelbare rondleiding-link (?rondleiding), UIT op de gewone pagina (keuze daar wordt onthouden).
-const MUSIC_TOUR_LINK=/(^|[?&#])(rondleiding|record)($|[&=])/.test(location.search.slice(1)+'&'+location.hash.slice(1));
+const MUSIC_TOUR_LINK=TOUR_ONLY;
 if(MUSIC_TOUR_LINK)MUSIC.on=true;else try{MUSIC.on=localStorage.getItem('tourMusic')==='1'}catch(e){}
 const MUSIC_START=0,MUSIC_VOL=.8;
 /* mp3 uit het datablok onderaan (id tourMp3) pas bij het eerste afspelen omzetten naar een blob-URL */

@@ -2,16 +2,33 @@
 
 Interactief 3D-model (WebGL) van de Berkenweg: de woningen 9, 9a, 9c en 9d en het landschap eromheen.
 Alles zit in één bestand: `index.html` (geometrie, materialen, landschapsdata en de muziek van de rondleiding).
+Openen in een browser met hardwareversnelling.
 
-- Openen: `index.html` in een browser met hardwareversnelling.
-- Rondleiding als deelbare kioskweergave: `index.html?rondleiding` (combineerbaar met `&winter`, `&kerst`, `&zonderomgeving`, `&zonderkompas`).
-- Opname: `index.html?record` speelt de rondleiding af en neemt hem op als mp4 met muziek, met na de ronde een vlucht langs de dierenweide en terug naar het beginbeeld; het bestand wordt aan het eind opgeslagen.
+## Parameters
+
+Zet een parameter achter het adres, bijvoorbeeld `index.html?verkennen`. Meerdere combineren met `&`, bijvoorbeeld `index.html?verkennen&kerst`.
+
+| Parameter | Wat het doet | Opmerking |
+|---|---|---|
+| *(geen)* | Rondleiding (kioskweergave): opbouw, rondleiding en rondvlucht over de omgeving, samen 2:30 met muziek. | Standaard. Huisknop linksboven gaat naar `?verkennen`. |
+| `?verkennen` | Het volledige model met alle bediening: zelf rondkijken, binnen lopen, datum/tijd en zonnestand in de bovenbalk. | |
+| `?rondleiding` | Zelfde als zonder parameter. | Blijft werken voor oude links. |
+| `?record` | Rondleiding die zichzelf opneemt als mp4 met muziek (2:30); het bestand wordt aan het eind opgeslagen. | Mag de browser geen geluid zonder klik afspelen, dan één klik op de rode opnameknop. Bediening is tijdens de opname uitgeschakeld. |
+| `?winter` | Winter met sneeuw. | |
+| `?kerst` | Kerstversiering. | Zet ook winter aan. |
+| `?schemer` | Schemer. | In de rondleiding het vaste schemerlicht; bij `?verkennen` de tijd op een half uur na zonsondergang. |
+| `?zonderomgeving` | Landschap rondom uit. | In de rondleiding komt het dan ook niet bij 0:21 erbij. |
+| `?zonderkompas` | Kompas uit. | |
+
+## Bronnen
+
 - Landschap: PDOK open data (AHN4, BGT, BAG, BRK), CC BY 4.0.
 - Muziek rondleiding: Motivational Corporate Post Rock by Infraction, music from #InAudio (https://inaudio.org/).
 
 ## Wijzigingen
 
 ### 2026-10-13
+- Standaard opent nu de rondleiding; het volledige model via `?verkennen`. De huisknop in de rondleiding gaat naar `?verkennen`.
 - Nieuwe link-optie `?record`: rondleiding die zichzelf opneemt (mp4 met muziek), met afsluitende vlucht over de dierenweide.
 - Donkere modus: achtergrond antraciet in plaats van bijna zwart, letters en kopjes lichter (beter leesbaar). De kleine kaart rechtsonder houdt zijn eigen kleuren in een donker kader.
 - Titel linksboven en paginatitel (ook in de rondleiding): "Berkenweg". Onder Tonen heet "Buren" nu "Nummers", met ook Nr. 9c (standaard aan) om 9c te verbergen.
