@@ -6,6 +6,8 @@ Alles zit in één bestand: `index.html` (geometrie, materialen, landschapsdata 
 - Openen: `index.html` in een browser met hardwareversnelling.
 - Rondleiding als deelbare kioskweergave: `index.html?rondleiding` (combineerbaar met `&winter`, `&kerst`, `&zonderomgeving`, `&zonderkompas`).
 - Landschap: PDOK open data (AHN4, BGT, BAG, BRK), CC BY 4.0.
+- Music from #InAudio: https://inaudio.org/
+- Motivational Corporate Post Rock by Infraction
 
 ## Wijzigingen
 
