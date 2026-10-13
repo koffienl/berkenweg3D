@@ -1,13 +1,12 @@
-# Berkenweg 9c – 3D
+# Berkenweg – 3D
 
-Interactief 3D-model (WebGL) van Berkenweg 9c in Doornspijk met de buren 9, 9a en 9d en het landschap eromheen.
+Interactief 3D-model (WebGL) van de Berkenweg: de woningen 9, 9a, 9c en 9d en het landschap eromheen.
 Alles zit in één bestand: `index.html` (geometrie, materialen, landschapsdata en de muziek van de rondleiding).
 
 - Openen: `index.html` in een browser met hardwareversnelling.
 - Rondleiding als deelbare kioskweergave: `index.html?rondleiding` (combineerbaar met `&winter`, `&kerst`, `&zonderomgeving`, `&zonderkompas`).
 - Landschap: PDOK open data (AHN4, BGT, BAG, BRK), CC BY 4.0.
-- Music from #InAudio: https://inaudio.org/
-- Motivational Corporate Post Rock by Infraction
+- Muziek rondleiding: Motivational Corporate Post Rock by Infraction, music from #InAudio (https://inaudio.org/).
 
 ## Wijzigingen
 
