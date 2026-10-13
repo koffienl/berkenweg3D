@@ -5,12 +5,14 @@ Alles zit in één bestand: `index.html` (geometrie, materialen, landschapsdata 
 
 - Openen: `index.html` in een browser met hardwareversnelling.
 - Rondleiding als deelbare kioskweergave: `index.html?rondleiding` (combineerbaar met `&winter`, `&kerst`, `&zonderomgeving`, `&zonderkompas`).
+- Opname: `index.html?record` speelt de rondleiding af en neemt hem op als mp4 met muziek, met na de ronde een vlucht langs de dierenweide en terug naar het beginbeeld; het bestand wordt aan het eind opgeslagen.
 - Landschap: PDOK open data (AHN4, BGT, BAG, BRK), CC BY 4.0.
 - Muziek rondleiding: Motivational Corporate Post Rock by Infraction, music from #InAudio (https://inaudio.org/).
 
 ## Wijzigingen
 
 ### 2026-10-13
+- Nieuwe link-optie `?record`: rondleiding die zichzelf opneemt (mp4 met muziek), met afsluitende vlucht over de dierenweide.
 - Donkere modus: achtergrond antraciet in plaats van bijna zwart, letters en kopjes lichter (beter leesbaar). De kleine kaart rechtsonder houdt zijn eigen kleuren in een donker kader.
 - Titel linksboven en paginatitel (ook in de rondleiding): "Berkenweg". Onder Tonen heet "Buren" nu "Nummers", met ook Nr. 9c (standaard aan) om 9c te verbergen.
 - Rondleiding-link: het landschap staat eerst uit en komt bij 0:21 (als 9a staat, net voordat de camera omzwenkt) met een plof erbij.
