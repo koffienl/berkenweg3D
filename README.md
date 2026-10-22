@@ -27,6 +27,9 @@ Zet een parameter achter het adres, bijvoorbeeld `index.html?verkennen`. Meerder
 
 ## Wijzigingen
 
+### 2026-10-22
+- Bedienen > Woning: schakelaar "Eettafels wisselen" verwisselt de eethoek van de woonkamer en die van de serre (tafel met stoelen).
+
 ### 2026-10-13
 - Standaard opent nu de rondleiding; het volledige model via `?verkennen`. De huisknop in de rondleiding gaat naar `?verkennen`.
 - Nieuwe link-optie `?record`: rondleiding die zichzelf opneemt (mp4 met muziek), met afsluitende vlucht over de dierenweide.
