@@ -28,6 +28,7 @@ Zet een parameter achter het adres, bijvoorbeeld `index.html?verkennen`. Meerder
 ## Wijzigingen
 
 ### 2026-10-28
+- VR ook vanaf de rondleiding-pagina (de standaardpagina): knop "Bekijk in VR" onder de afspeelknop en een VR-knop in de knoppenrij links, alleen zichtbaar in een browser met VR.
 - VR (eerste versie, bv. Meta Quest): knop "VR" in de bovenbalk van `?verkennen`, alleen zichtbaar in een browser met VR. Alleen 9c (zonder landschap en buren) op ware grootte; rondkijken met het hoofd, linker stick lopen (door muren heen), rechter stick draaien in stappen, A/X verdieping omhoog, B/Y omlaag.
 
 ### 2026-10-22
