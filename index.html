@@ -540,12 +540,23 @@ function mirrorFor(cam,visible){if(cam.ortho)return null;const e=cam.eye,f=V.sub
  gl.disable(gl.BLEND);gl.depthMask(true);for(let b of opaque)draw(b);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);for(let b of trans)draw(b);gl.depthMask(true);gl.disable(gl.BLEND);
   if(!isRefl&&winter){gl.useProgram(flakeP);gl.uniformMatrix4fv(fu.VP,false,VPm);gl.uniformMatrix4fv(fu.SnowVP,false,snowVP);gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,snowDepth);gl.uniform1i(fu.SnowD,3);gl.uniform3fv(fu.Eye,eyeP);gl.uniform1f(fu.T,performance.now()/1000);gl.uniform1f(fu.Px,h);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.bindVertexArray(flakeVao);gl.drawArrays(gl.POINTS,0,FLAKES);gl.depthMask(true);gl.disable(gl.BLEND)}}
  if(mir){ensureRefl(w,h);gl.bindFramebuffer(gl.FRAMEBUFFER,reflFB);scene(mm(vp,reflMat(mir.n,mir.d)),reflPt(cam.eye,mir.n,mir.d),1,[mir.n[0],mir.n[1],mir.n[2],-mir.d-.004],true);gl.bindFramebuffer(gl.FRAMEBUFFER,null)}
- if(xr){gl.bindFramebuffer(gl.FRAMEBUFFER,xr.fb);gl.enable(gl.SCISSOR_TEST);for(const v of xr.views){VX=v.x;VY=v.y;w=v.w;h=v.h;gl.scissor(VX,VY,w,h);scene(v.vp,v.eye,0,[0,0,0,1],false)}gl.disable(gl.SCISSOR_TEST);return null}   /* VR: beide ogen in de laag van de bril */
+ if(xr){gl.bindFramebuffer(gl.FRAMEBUFFER,xr.fb);gl.enable(gl.SCISSOR_TEST);for(const v of xr.views){VX=v.x;VY=v.y;w=v.w;h=v.h;gl.scissor(VX,VY,w,h);scene(v.vp,v.eye,0,[0,0,0,1],false);if(xr.overlay&&xr.overlay.length)drawOverlay(v.vp,xr.overlay)}gl.disable(gl.SCISSOR_TEST);return null}   /* VR: beide ogen in de laag van de bril */
  scene(vp,cam.eye,0,[0,0,0,1],false);return{vp,aspect,width:rect.width,height:rect.height}}
  /* VR: samengevoegde buffers per materiaal (momentopname bij het starten) */
  function mergeVR(groups){const out=[];for(const g of groups){const vao=gl.createVertexArray();gl.bindVertexArray(vao);const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,g.data,gl.STATIC_DRAW);for(let i=0;i<3;i++){gl.enableVertexAttribArray(i);gl.vertexAttribPointer(i,i<2?3:2,gl.FLOAT,false,32,i===0?0:i===1?12:24)}out.push({tag:'vr',material:g.material,vao,buf,count:g.data.length/8,g:-1})}gl.bindVertexArray(null);return out}
  function freeVR(list){for(const b of list){gl.deleteBuffer(b.buf);gl.deleteVertexArray(b.vao)}}
- return{upload,uploadOne,render,gl,shadowOK,gpu,mergeVR,freeVR};}
+ /* VR-overlay: plat getekend paneel en straal, zonder licht en altijd zichtbaar (ook als je in een muur staat) */
+ const ovP=program(`#version 300 es
+ layout(location=0)in vec3 aP;layout(location=1)in vec2 aT;uniform mat4 uVP;out vec2 vT;void main(){vT=aT;gl_Position=uVP*vec4(aP,1.);}`,`#version 300 es
+ precision mediump float;in vec2 vT;uniform sampler2D uT;uniform vec4 uC;uniform float uUseT;out vec4 o;void main(){o=(uUseT>.5?texture(uT,vT):vec4(1.))*uC;}`),
+  ovU={VP:gl.getUniformLocation(ovP,'uVP'),T:gl.getUniformLocation(ovP,'uT'),C:gl.getUniformLocation(ovP,'uC'),UseT:gl.getUniformLocation(ovP,'uUseT')},ovVao=gl.createVertexArray(),ovBuf=gl.createBuffer();
+ gl.bindVertexArray(ovVao);gl.bindBuffer(gl.ARRAY_BUFFER,ovBuf);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,2,gl.FLOAT,false,20,12);gl.bindVertexArray(null);
+ function drawOverlay(VPm,items){gl.disable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.useProgram(ovP);gl.uniformMatrix4fv(ovU.VP,false,VPm);gl.bindVertexArray(ovVao);gl.bindBuffer(gl.ARRAY_BUFFER,ovBuf);
+  for(const it of items){gl.bufferData(gl.ARRAY_BUFFER,it.verts,gl.DYNAMIC_DRAW);gl.uniform4fv(ovU.C,it.color);gl.uniform1f(ovU.UseT,it.tex?1:0);if(it.tex){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,it.tex);gl.uniform1i(ovU.T,0)}gl.drawArrays(gl.TRIANGLES,0,it.verts.length/5)}
+  gl.bindVertexArray(null);gl.disable(gl.BLEND);gl.enable(gl.DEPTH_TEST)}
+ let vrTexH=null;function vrTexture(cv){if(!vrTexH)vrTexH=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,vrTexH);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  for(const[k,v]of[[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,k,v);return vrTexH}
+ return{upload,uploadOne,render,gl,shadowOK,gpu,mergeVR,freeVR,vrTexture};}
 
 </script>
 <script>
@@ -3306,15 +3317,58 @@ function vrToWorld(l){const c=Math.cos(VR.yaw),s=Math.sin(VR.yaw);return[VR.pos[
 async function vrInit(){if(!navigator.xr)return;try{if(await navigator.xr.isSessionSupported('immersive-vr')){if(TOUR_ONLY){$('tourVr').hidden=false;$('tourVrFx').hidden=false}else $('vrBtn').hidden=false}}catch(e){}}
 /* rondleiding-pagina: VR-knop onder de afspeelknop en in de knoppenrij; een lopende rondleiding pauzeert */
 function vrKiosk(){if(fly.active&&!fly.paused&&tourKiosk.started)flyPauseToggle();vrStart()}
-function vrSnapshot(){const groups=new Map();for(const[k,b]of batches){if(!b.data.length)continue;if(b.tag!=='ground'&&!(is9c(b.tag)&&visibility(b.tag)))continue;
+function vrSnapshot(dyn){const groups=new Map();for(const[k,b]of batches){if(!b.data.length)continue;if(dyn&&dyn.has(b.tag))continue;if(b.tag!=='ground'&&!(is9c(b.tag)&&visibility(b.tag)))continue;
   let g=groups.get(b.material);if(!g)groups.set(b.material,g=[]);g.push(b.data)}
  const out=[];for(const[m,arrs]of groups){let n=0;for(const a of arrs)n+=a.length;const f=new Float32Array(n);let o=0;for(const a of arrs){f.set(a,o);o+=a.length}out.push({material:m,data:f})}return renderer.mergeVR(out)}
+// VR-menu (Bedienen) op de linkerpols: kijk naar je linkerhand, dan verschijnt het paneel; richt met de rechter controller en klik met de trekker.
+// Onderdelen die bij deze knoppen bewegen of wisselen, worden in VR apart (live, met animatie) getekend; de rest blijft samengevoegd.
+const VR_ANIM_TAGS=['patioLeaves','serreShadeAnim','entryLeaf','siteBraaiFlap','leafAnim','serrePanels','siteShedTubGlass','siteShedLoungeGlass'];
+const VR_KEYS=['doorOpen','patioOpen','vlizoOpen','diningSwap','serreOpen','serreDoors','shadeClosed','tubGlassOpen','loungeGlassOpen','braaiOpen','tubOpen','parasolOpen'];
+const VR_MENU=[['Woning'],['Voordeur','doorOpen'],['Tuindeuren','patioDoorsOpen'],['Vlizotrap','vlizoOpen'],['Eettafels wisselen','diningSwap'],['Serre'],['Glaswand','serreOpen'],['Deuren','serreDoors'],['Zonwering','shadeClosed'],
+ ['Overkapping'],['Tubruimte','tubGlassOpen'],['Zithoek','loungeGlassOpen'],['Braai','braaiOpen'],['Tubverlichting','tubOpen'],['Tuin'],['Parasol','parasolOpen']];
+const VRP={cv:null,W:.24,H:.30,btns:[],key:'',tex:null,show:false,hover:null,trig:false,quad:null};
+function vrDynTags(){const tags=new Set();for(const b of batches.values())if(is9c(b.tag))tags.add(b.tag);const dyn=new Set(VR_ANIM_TAGS);for(const t of tags)if(t.startsWith('siteFire'))dyn.add(t);
+ for(const k of VR_KEYS){const base=new Map();for(const t of tags)base.set(t,visibility(t));const old=state[k];state[k]=!old;for(const t of tags)if(visibility(t)!==base.get(t))dyn.add(t);state[k]=old}return dyn}
+function vrPanelDraw(){if(!VRP.cv){VRP.cv=document.createElement('canvas');VRP.cv.width=512;VRP.cv.height=640}
+ const key=VR_MENU.map(m=>m[1]?($(m[1]).checked?1:0):'').join('')+'|'+VRP.hover;if(key===VRP.key&&VRP.tex)return;VRP.key=key;
+ const x=VRP.cv.getContext('2d'),W=512,H=640;x.clearRect(0,0,W,H);x.fillStyle='#1d2320ee';x.beginPath();x.roundRect(4,4,W-8,H-8,26);x.fill();x.strokeStyle='#4a564e';x.lineWidth=2;x.stroke();
+ x.fillStyle='#e8eee9';x.font='700 30px system-ui,sans-serif';x.fillText('Bedienen',26,52);VRP.btns=[];let y=72,col=0;
+ for(const m of VR_MENU){if(!m[1]){if(col){y+=58;col=0}x.fillStyle='#9fb0a4';x.font='700 19px system-ui,sans-serif';x.fillText(m[0].toUpperCase(),26,y+24);y+=36;continue}
+  const bx=22+col*238,bw=228,bh=48,on=$(m[1]).checked,hv=VRP.hover===m[1];x.fillStyle=on?'#3f6b4c':'#2c332f';x.beginPath();x.roundRect(bx,y,bw,bh,24);x.fill();
+  x.strokeStyle=hv?'#f1c75a':on?'#7fb08c':'#56625a';x.lineWidth=hv?4:2;x.stroke();x.fillStyle=on?'#ffffff':'#d4dcd6';x.font='600 22px system-ui,sans-serif';x.textAlign='center';x.fillText(m[0],bx+bw/2,y+31);x.textAlign='left';
+  VRP.btns.push({id:m[1],x:bx,y,w:bw,h:bh});if(col){y+=58;col=0}else col=1}
+ VRP.tex=renderer.vrTexture(VRP.cv)}
+const vrQ=(q,v)=>{const ix=q.w*v[0]+q.y*v[2]-q.z*v[1],iy=q.w*v[1]+q.z*v[0]-q.x*v[2],iz=q.w*v[2]+q.x*v[1]-q.y*v[0],iw=-q.x*v[0]-q.y*v[1]-q.z*v[2];return[ix*q.w+iw*-q.x+iy*-q.z-iz*-q.y,iy*q.w+iw*-q.y+iz*-q.x-ix*-q.z,iz*q.w+iw*-q.z+ix*-q.y-iy*-q.x]};
+const vrDir=v=>{const c=Math.cos(VR.yaw),s=Math.sin(VR.yaw);return[v[0]*c+v[2]*s,v[1],-v[0]*s+v[2]*c]};
+function vrQuad(C,R,U,w,h,uv){const a=(sx,sy)=>[C[0]+R[0]*sx*w/2+U[0]*sy*h/2,C[1]+R[1]*sx*w/2+U[1]*sy*h/2,C[2]+R[2]*sx*w/2+U[2]*sy*h/2],TL=a(-1,1),TR=a(1,1),BL=a(-1,-1),BR=a(1,-1);
+ return new Float32Array([...TL,0,0,...BL,0,1,...TR,1,0, ...TR,1,0,...BL,0,1,...BR,1,1])}
+// paneel tonen/verbergen, straal en klikken; geeft de overlay-onderdelen terug
+function vrMenu(frame,pose){const items=[];let left=null,right=null;for(const src of frame.session.inputSources){if(src.handedness==='left')left=src;if(src.handedness==='right')right=src}
+ const head=vrToWorld([pose.transform.position.x,pose.transform.position.y,pose.transform.position.z]),hf=vrDir(vrQ(pose.transform.orientation,[0,0,-1]));
+ let C=null;if(left&&left.gripSpace){const gp=frame.getPose(left.gripSpace,VR.ref);if(gp){const g=vrToWorld([gp.transform.position.x,gp.transform.position.y,gp.transform.position.z]);C=[g[0],g[1]+.20,g[2]]}}
+ if(!C){VRP.show=false;return items}
+ const v=[C[0]-head[0],C[1]-head[1],C[2]-head[2]],dl=Math.hypot(...v)||1,cosA=(v[0]*hf[0]+v[1]*hf[1]+v[2]*hf[2])/dl;VRP.show=dl<.95&&cosA>(VRP.show||VRP.hover?Math.cos(.73):Math.cos(.56));   /* kijk naar je linkerhand */
+ if(!VRP.show){VRP.hover=null;return items}
+ const N=[-v[0]/dl,-v[1]/dl,-v[2]/dl];let R=[N[2],0,-N[0]];const rl=Math.hypot(R[0],R[2])||1;R=[R[0]/rl,0,R[2]/rl];const U=[N[1]*R[2]-N[2]*R[1],N[2]*R[0]-N[0]*R[2],N[0]*R[1]-N[1]*R[0]];
+ let hover=null,hit=null,o=null,d=null;
+ if(right&&right.targetRaySpace){const rp=frame.getPose(right.targetRaySpace,VR.ref);if(rp){o=vrToWorld([rp.transform.position.x,rp.transform.position.y,rp.transform.position.z]);d=vrDir(vrQ(rp.transform.orientation,[0,0,-1]));
+   const den=d[0]*N[0]+d[1]*N[1]+d[2]*N[2];if(Math.abs(den)>1e-4){const t=((C[0]-o[0])*N[0]+(C[1]-o[1])*N[1]+(C[2]-o[2])*N[2])/den;if(t>0){const P=[o[0]+d[0]*t,o[1]+d[1]*t,o[2]+d[2]*t],q=[P[0]-C[0],P[1]-C[1],P[2]-C[2]],
+    u=(q[0]*R[0]+q[1]*R[1]+q[2]*R[2])/VRP.W+.5,w=.5-(q[0]*U[0]+q[1]*U[1]+q[2]*U[2])/VRP.H;if(u>=0&&u<=1&&w>=0&&w<=1){hit=P;const px=u*512,py=w*640;for(const b of VRP.btns)if(px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h)hover=b.id}}}}}
+ VRP.hover=hover;const trig=!!(right&&right.gamepad&&right.gamepad.buttons[0]&&right.gamepad.buttons[0].pressed);
+ if(trig&&!VRP.trig&&hover){$(hover).click();try{right.gamepad.hapticActuators&&right.gamepad.hapticActuators[0]&&right.gamepad.hapticActuators[0].pulse(.4,25)}catch(e){}}VRP.trig=trig;
+ vrPanelDraw();items.push({verts:vrQuad(C,R,U,VRP.W,VRP.H),tex:VRP.tex,color:[1,1,1,1]});
+ if(o){const end=hit||[o[0]+d[0]*1.2,o[1]+d[1]*1.2,o[2]+d[2]*1.2],M=[(o[0]+end[0])/2,(o[1]+end[1])/2,(o[2]+end[2])/2],len=Math.hypot(end[0]-o[0],end[1]-o[1],end[2]-o[2]),to=[head[0]-M[0],head[1]-M[1],head[2]-M[2]];
+  let S=[d[1]*to[2]-d[2]*to[1],d[2]*to[0]-d[0]*to[2],d[0]*to[1]-d[1]*to[0]];const sl=Math.hypot(...S)||1;S=S.map(x=>x/sl);
+  items.push({verts:vrQuad(M,S,d,.004,len),tex:null,color:hover?[.95,.78,.35,.9]:[.85,.9,1,.55]});
+  if(hit)items.push({verts:vrQuad(hit,R,U,.012,.012),tex:null,color:[.95,.78,.35,1]})}
+ return items}
+
 async function vrStart(){if(VR.session)return;let s;try{s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']})}catch(e){toast('VR kon niet starten: '+e.message);return}
  VR.session=s;const gl=renderer.gl;try{await gl.makeXRCompatible()}catch(e){}
  s.updateRenderState({baseLayer:new XRWebGLLayer(s,gl,{antialias:true}),depthNear:.05,depthFar:400});
  try{VR.ref=await s.requestReferenceSpace('local-floor')}catch(e){VR.ref=await s.requestReferenceSpace('local')}
  if(state.mode==='walk'){VR.floor=state.floor;VR.pos=[walk.eye[0],fbase(state.floor),walk.eye[2]];VR.yaw=-walk.yaw}else{VR.floor=0;VR.pos=[-3,0,6.1];VR.yaw=-Math.PI/2}   /* binnen: waar je stond; anders voor de voordeur */
- VR.saved={mode:state.mode,cut:state.cut};state.mode='site';state.cut=100;VR.list=vrSnapshot();
+ VR.saved={mode:state.mode,cut:state.cut};state.mode='site';state.cut=100;VR.dyn=vrDynTags();VR.list=vrSnapshot(VR.dyn);VRP.key='';VRP.show=false;
  s.addEventListener('end',vrEnd);VR.last=performance.now();s.requestAnimationFrame(vrFrame);$('vrBtn').classList.add('active')}
 function vrEnd(){VR.session=null;if(VR.list){renderer.freeVR(VR.list);VR.list=null}if(VR.saved){state.mode=VR.saved.mode;state.cut=VR.saved.cut;VR.saved=null}$('vrBtn').classList.remove('active');dirty=true;shadowDirty=true}
 function vrTurn(d,pose){const p=pose.transform.position,E=vrToWorld([p.x,0,p.z]);VR.yaw+=d;const c=Math.cos(VR.yaw),s=Math.sin(VR.yaw);VR.pos[0]=E[0]-(p.x*c+p.z*s);VR.pos[2]=E[2]-(-p.x*s+p.z*c)}
@@ -3328,7 +3382,10 @@ function vrFrame(t,frame){const s=frame.session;s.requestAnimationFrame(vrFrame)
   if(up&&!VR.btn[h+'u']){VR.floor=Math.min(2,VR.floor+1);VR.pos[1]=fbase(VR.floor)}if(dn&&!VR.btn[h+'d']){VR.floor=Math.max(0,VR.floor-1);VR.pos[1]=fbase(VR.floor)}VR.btn[h+'u']=up;VR.btn[h+'d']=dn}
  const layer=s.renderState.baseLayer,L=vrLocalFromWorld(),views=[];
  for(const v of pose.views){const r=layer.getViewport(v),p=v.transform.position;views.push({vp:mm(v.projectionMatrix,mm(v.transform.inverse.matrix,L)),eye:vrToWorld([p.x,p.y,p.z]),x:r.x,y:r.y,w:r.width,h:r.height})}
- renderer.render(null,state,visibility,false,{fb:layer.framebuffer,views,list:VR.list})}
+ const anim=animTick(dt);let sd=false;if(anim)VR.shadowPending=true;else if(VR.shadowPending){VR.shadowPending=false;sd=true}   /* schaduw pas bijwerken als de beweging klaar is */
+ if(state.braaiOpen&&t-fireLast>140){firePhase=(firePhase+1)%3;fireLast=t}
+ const list=VR.list.slice();for(const b of renderer.gpu.values())if(VR.dyn.has(b.tag)&&b.count&&visibility(b.tag))list.push(b);
+ renderer.render(null,state,visibility,sd,{fb:layer.framebuffer,views,list,overlay:vrMenu(frame,pose)})}
 $('vrBtn').onclick=vrStart;$('tourVr').onclick=e=>{e.stopPropagation();vrKiosk()};vrInit();
 
 // ---- Soundtrack rondleiding: ingebedde mp3 (datablok id tourMp3 onderaan het bestand, pas gelezen bij het eerste afspelen), start bij het begin en lust terug naar het begin ----
@@ -3364,7 +3421,7 @@ function flyStart(){if(fly.active)return;const ks=['mode','plot','garden','outbu
 function flyStop(){if(!fly.active)return;fly.active=false;fly.free=null;fly.route=null;fly.paused=false;fly.scrub=false;fly.build=null;DROP.on=false;shadowDirty=true;if(flySaved){Object.assign(state,flySaved);flySaved=null}const b=$('flyBtn');if(b)b.classList.remove('active');document.body.classList.remove('flyover');flyBtnIcon('play');configure();dirty=true}
 function flyPauseToggle(){if(TOUR_ONLY&&!tourKiosk.started){tourBegin();return}if(fly.route!=null&&fly.route>=ROUTE_T-.01){MUSIC.restart=true;tourBegin();return}   /* einde route: opnieuw beginnen */if(!fly.active){flyStart();return}fly.paused=!fly.paused;flyBtnIcon(fly.paused?'play':'pause');if(!fly.paused){fly.last=performance.now();dirty=true}}
 let last=performance.now(),frame=0,firePhase=0,fireLast=0;function loop(now){let dt=Math.min((now-last)/1000,.25);last=now;flyUpdate(now);musicUpdate();if(landOn()&&state.camels!==false){camelTick(dt);const ce=getCamera().eye,cp=window.CAMEL_POI;loop.za=(loop.za||0)+dt;if((!cp||Math.hypot(ce[0]-cp.c[0],ce[2]-cp.c[2])<240)&&loop.za>=.033){loop.za=0;animRebuild('landCamels',buildCamels);dirty=true}}/* kamelen alleen hertekenen als ze in de buurt van de camera zijn */if(state.winter&&state.mode!=='cut')dirty=true;   // vallende sneeuw: elke frame tekenen
-landFxTick(now);recTick(now);if(animTick(dt)){dirty=true;shadowDirty=true}if(move(dt)){dirty=true;drawMap()}if(state.braaiOpen&&state.outbuilding&&state.plot&&state.mode!=='cut'&&now-fireLast>140){firePhase=(firePhase+1)%3;fireLast=now;dirty=true}if(dirty||shadowDirty){cam=getCamera();frameData=renderer.render(cam,state,visibility,shadowDirty);shadowDirty=false;dirty=false;updateLabels();compassUpdate(cam);frame++}requestAnimationFrame(loop)}
+landFxTick(now);recTick(now);if(!VR.session&&animTick(dt)){dirty=true;shadowDirty=true}if(move(dt)){dirty=true;drawMap()}if(state.braaiOpen&&state.outbuilding&&state.plot&&state.mode!=='cut'&&now-fireLast>140){firePhase=(firePhase+1)%3;fireLast=now;dirty=true}if(dirty||shadowDirty){cam=getCamera();frameData=renderer.render(cam,state,visibility,shadowDirty);shadowDirty=false;dirty=false;updateLabels();compassUpdate(cam);frame++}requestAnimationFrame(loop)}
 try{renderer=initRenderer($('view'));caps(0,1.10);caps(1,F+1.10);renderer.upload();bind();renderSiteLabels();renderRoomList();resetCamera();$('loading').style.display='none';window.modelQA={bathroom:BATHROOM,focusBathroom,kitchen:KITCHEN,focusKitchen,stepPathConfig:STEP_PATH,steppingGeometry,alignPavilionToStepPath,patioDoors:PATIO_DOORS,terraceConfig:TERRACE,pavilion:PAVILION,terraceGeometry,focusCorrection,configure,batches,site:SITE,buildSite,enterGarden,sitePoint,polygonArea,state,rooms,footprint:FOOT,main:MAIN,annex:ANNEX,wallBoxes,colliders,enterRoom,setFloor,setMode,resetCamera,canMove,visibility,renderer,walk,orbit,getCamera,roomAt,getFrames:()=>frame};configure();requestAnimationFrame(loop);
  // Deelbare link met alleen de rondleiding: ...html?rondleiding (of #rondleiding). Alle bediening verborgen, start direct, klik = pauze.
  if(TOUR_ONLY)tourKioskInit();if(REC_MODE)recInit();}catch(e){console.error(e);$('loading').innerHTML='<b>Het 3D-model kon niet starten</b><span style="max-width:390px;text-align:center;font-size:12px;line-height:1.8">'+e.message+'</span><p style="font-size:12px">Open het HTML-bestand rechtstreeks in Chrome of Edge.</p>';window.modelError=e.message}
