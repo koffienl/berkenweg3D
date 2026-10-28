@@ -3308,7 +3308,7 @@ function clockInit(){if(!CLOCK_ON){for(const id of['clockCtl','clockInfo'])$(id)
  clockNow()}
 clockInit();
 
-// ---- VR (Meta Quest e.d., WebXR, alleen via https): eerste versie. Alleen 9c (geen landschap, geen buren), wat er bij het starten zichtbaar is,
+// ---- VR (Meta Quest e.d., WebXR, alleen via https): 9c en de buurkavels (geen landschap), wat er bij het starten zichtbaar is,
 // samengevoegd per materiaal. Rondkijken met het hoofd; linker stick = lopen in de kijkrichting (dwars door muren), rechter stick = draaien in
 // stappen van 30 graden, A/X = verdieping omhoog, B/Y = omlaag. Stoppen met de Meta-knop: terug in de gewone weergave.
 const VR={session:null,ref:null,list:null,pos:[-3,0,6.1],yaw:-Math.PI/2,floor:0,saved:null,turnLatch:false,btn:{},last:0};
@@ -3317,7 +3317,9 @@ function vrToWorld(l){const c=Math.cos(VR.yaw),s=Math.sin(VR.yaw);return[VR.pos[
 async function vrInit(){if(!navigator.xr)return;try{if(await navigator.xr.isSessionSupported('immersive-vr')){if(TOUR_ONLY){$('tourVr').hidden=false;$('tourVrFx').hidden=false}else $('vrBtn').hidden=false}}catch(e){}}
 /* rondleiding-pagina: VR-knop onder de afspeelknop en in de knoppenrij; een lopende rondleiding pauzeert */
 function vrKiosk(){if(fly.active&&!fly.paused&&tourKiosk.started)flyPauseToggle();vrStart()}
-function vrSnapshot(dyn){const groups=new Map();for(const[k,b]of batches){if(!b.data.length)continue;if(dyn&&dyn.has(b.tag))continue;if(b.tag!=='ground'&&!(is9c(b.tag)&&visibility(b.tag)))continue;
+/* VR toont de vier kavels: 9c en de buren 9, 9a en 9d (valgroepen 0-17), volgens Tonen > Nummers; geen landschap */
+function vrInLots(tag){const g=dropGroupOf(tag,'');return g>=0&&g<=17}
+function vrSnapshot(dyn){const groups=new Map();for(const[k,b]of batches){if(!b.data.length)continue;if(dyn&&dyn.has(b.tag))continue;if(b.tag!=='ground'&&!(vrInLots(b.tag)&&visibility(b.tag)))continue;
   let g=groups.get(b.material);if(!g)groups.set(b.material,g=[]);g.push(b.data)}
  const out=[];for(const[m,arrs]of groups){let n=0;for(const a of arrs)n+=a.length;const f=new Float32Array(n);let o=0;for(const a of arrs){f.set(a,o);o+=a.length}out.push({material:m,data:f})}return renderer.mergeVR(out)}
 // VR-menu (Bedienen) op de linkerpols: kijk naar je linkerhand, dan verschijnt het paneel; richt met de rechter controller en klik met de trekker.
